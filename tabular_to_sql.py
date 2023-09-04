@@ -118,8 +118,8 @@ TABLES = {
             {"Name": "new__value", "Type": String},
             {"Name": "comment", "Type": String}
         ],
-        #"keys": ["assignment__id", "date", "time", "action"]
-        "keys": []
+        "keys": ["assignment__id", "date", "time", "action"]
+        #"keys": []
     },
     "interview__actions": {
         "schema": [

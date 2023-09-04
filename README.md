@@ -22,3 +22,9 @@ python ./get_export.py --url 'https://demo.mysurvey.solutions' --username api_us
 ```
 
 - Note : before with https://github.com/vlasvlasvlas/survey-solution-api-massive-export
+
+- Note : changes were made into requirements.txt and install process (changes in new req.txt)
+
+pip install --force-reinstall 'sqlalchemy<2.0.0'
+
+pip install --force-reinstall 'tqdm<4.52.1'
