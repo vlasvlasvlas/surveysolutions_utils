@@ -20,3 +20,5 @@ tabular_to_sql.convert("example_1_Tabular.zip",  "sqlite:///example_1.db", "ques
 ```shell
 python ./get_export.py --url 'https://demo.mysurvey.solutions' --username api_user --password pass1234
 ```
+
+- Note : before with https://github.com/vlasvlasvlas/survey-solution-api-massive-export
