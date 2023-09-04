@@ -3,7 +3,6 @@ import os
 import zipfile
 from tempfile import TemporaryDirectory
 
-
 from pathlib import Path
 import json
 import csv
@@ -11,20 +10,42 @@ from datetime import datetime
 from sqlalchemy import create_engine, MetaData, Table, PrimaryKeyConstraint, Column, Integer, String, Float, Date, Time, DateTime
 from tqdm import tqdm
 
+# fix 
+SQLALCHEMY_WARN_20=1
+
 from ssaw.models import QuestionnaireDocument # Questionnaire
 from ssaw.utils import get_properties # get_variables
 
 
 def create_schema(variablenames, variables, roster_ids=[]):
     ret = []
+
     for var in variablenames:
+
         if var == "sssys_irnd":
             type = Float
+
         elif var in ["has__errors", "interview__status", "assignment__id"]:
             type = Integer
+
         else:
+
+
+
             var_val = var.split("__")
-            t = variables[var_val[0]]._Type if var_val[0] in variables else "TextQuestion"
+
+
+            # fix 
+            if "__" in var_val:
+                var_val = var.split("__")
+                t = variables[var_val[0]]._Type if var_val[0] in variables else "TextQuestion"
+            else:
+                t = variables[var_val]._Type if var_val in variables else "TextQuestion"
+
+            
+
+            
+
             if (
                 t in ['SingleQuestion', 'MultyOptionsQuestion']
                 or t != "NumericQuestion"
@@ -32,13 +53,18 @@ def create_schema(variablenames, variables, roster_ids=[]):
                 and var in roster_ids
             ):
                 type = Integer
+
             elif t == "NumericQuestion":
                 type = Integer if variables[var].IsInteger else Float
+
             elif t == "GpsCoordinateQuestion":
                 type = DateTime if var_val[1] == "Timestamp" else Float
+
             else:
                 type = String
+
         ret.append({"Name": var, "Type": type})
+
     return ret
 
 
@@ -49,7 +75,7 @@ def create_table(tablename, schema, keys, metadata):
 
 
 def read_header(filepath):
-    with open(filepath, "r", encoding="utf-8-sig") as f:
+    with open(filepath, "r", encoding="utf-8") as f:
         return f.readline().replace("\n", "").split("\t")
 
 
@@ -77,6 +103,7 @@ def fix_dtypes(d, sc):
 
 
 TABLES = {
+
     "assignment__actions": {
         "schema": [
             {"Name": "assignment__id", "Type": Integer},
@@ -91,7 +118,8 @@ TABLES = {
             {"Name": "new__value", "Type": String},
             {"Name": "comment", "Type": String}
         ],
-        "keys": ["assignment__id", "date", "time", "action"]
+        #"keys": ["assignment__id", "date", "time", "action"]
+        "keys": []
     },
     "interview__actions": {
         "schema": [
@@ -129,7 +157,7 @@ TABLES = {
             {"Name": "interview__id", "Type": String},
             {"Name": "interview__status", "Type": Integer},
             {"Name": "responsible", "Type": String},
-            {"Name": "interview__status", "Type": Integer},
+            #{"Name": "interview__status", "Type": Integer},
             {"Name": "interviewers", "Type": Integer},
             {"Name": "rejections__sup", "Type": Integer},
             {"Name": "rejections__hq", "Type": Integer},
@@ -156,7 +184,7 @@ TABLES = {
 
 
 def no_data(file):
-    with open(file, 'r') as f:
+    with open(file, 'r',encoding='utf-8') as f:
         _ = f.readline()
         return not f.readline()
 
@@ -195,35 +223,58 @@ def convert(sourcezip, conn_url=None, document=None):
 
         q = QuestionnaireDocument(**cont)
 
+
         variables = list(get_properties(q))
 
         for f in Path(tempdir).glob('*.tab'):
+
             tablename = f.name.replace(".tab", "")
-            if tablename in TABLES:
+
+
+            if tablename in TABLES:      
                 sc = TABLES[tablename]["schema"]
                 keys = TABLES[tablename]["keys"]
             else:
+
+                print("TABLE NOT IN TABLES! : ", tablename)
+
                 columns = read_header(f)
                 keys = []
                 roster_ids = []
+
                 for var in columns:
-                    if "assignment__id" != var and "__id" in var:
+
+                    if tablename == 'assignment__actions':
+                        print(" >>> columns var : ",var)
+
+                    #if "assignment__id" != var and "__id" in var:
+                    if "__id" in var:
                         keys.append(var)
                         if var != "interview__id":
                             roster_ids.append(var)
+
                 sc = create_schema(columns, variables, roster_ids)
+
+                if f.name == 'assignment__actions.tab':
+                    print(">> keys :",keys)
+
                 TABLES[tablename] = {"schema": sc, "keys": keys}
+
+            if tablename == 'assignment__actions':
+                print(" >>> table create: : ",tablename, sc, keys, metadata)
             create_table(tablename, sc, keys, metadata)
 
         metadata.drop_all(engine)
         metadata.create_all(engine)
 
         for f in Path(tempdir).glob('*.tab'):
+
             tablename = f.name.replace(".tab", "")
             if no_data(f):
                 continue
             ins = metadata.tables[tablename].insert()
-            with open(f, "r", encoding="utf-8-sig") as f:
+            with open(f, "r", encoding="utf-8") as f:
+        
                 rd = csv.DictReader(f, delimiter='\t')
                 pbar = tqdm(rd, unit=' rows')
                 pbar.set_description("Processing %s" % tablename)
