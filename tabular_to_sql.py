@@ -2,6 +2,8 @@ import argparse
 import os
 import zipfile
 from tempfile import TemporaryDirectory
+
+
 from pathlib import Path
 import json
 import csv
@@ -9,8 +11,8 @@ from datetime import datetime
 from sqlalchemy import create_engine, MetaData, Table, PrimaryKeyConstraint, Column, Integer, String, Float, Date, Time, DateTime
 from tqdm import tqdm
 
-from ssaw.models import Questionnaire
-from ssaw.utils import get_variables
+from ssaw.models import QuestionnaireDocument # Questionnaire
+from ssaw.utils import get_properties # get_variables
 
 
 def create_schema(variablenames, variables, roster_ids=[]):
@@ -166,8 +168,20 @@ def convert(sourcezip, conn_url=None, document=None):
     engine = create_engine(conn_url)
     metadata = MetaData()
 
+    
     with TemporaryDirectory() as tempdir:
+
+        # windows env 
+        # import tempfile
+        #tempdir = tempfile.mkdtemp()
+
+        print("-------------")
+        print("tempdir:",tempdir)
+        print("sourcezip:",sourcezip)
+        print("-------------")
+
         with zipfile.ZipFile(sourcezip, 'r') as zip_ref:
+            
             zip_ref.extractall(tempdir)
 
         with zipfile.ZipFile(tempdir + "/questionnaire/content.zip", 'r') as zip_ref:
@@ -178,8 +192,10 @@ def convert(sourcezip, conn_url=None, document=None):
             local_document = document
 
         cont = json.load(open(local_document, encoding="utf-8"))
-        q = Questionnaire(**cont)
-        variables = list(get_variables(q))
+
+        q = QuestionnaireDocument(**cont)
+
+        variables = list(get_properties(q))
 
         for f in Path(tempdir).glob('*.tab'):
             tablename = f.name.replace(".tab", "")
